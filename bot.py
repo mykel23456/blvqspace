@@ -6,7 +6,8 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     filters,
-    ContextTypes
+    ContextTypes,
+    JobQueue
 )
 from dotenv import load_dotenv
 
@@ -22,7 +23,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send a message when the command /start is issued."""
     user = update.effective_user
     await update.message.reply_html(
         rf"Hi {user.mention_html()}!",
@@ -30,24 +30,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Send a message when the command /help is issued."""
-    await update.message.reply_text("Help!")
+    await update.message.reply_text("Help command received!")
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Echo the user message."""
-    await update.message.reply_text(update.message.text)
+    await update.message.reply_text(f"You said: {update.message.text}")
 
 def main() -> None:
-    """Start the bot."""
-    # Create the Application
-    application = Application.builder().token(BOT_TOKEN).build()
+    # Create application without automatic job queue
+    application = Application.builder().token(BOT_TOKEN).job_queue(None).build()
+    
+    # Create job queue manually
+    job_queue = JobQueue()
+    job_queue.set_application(application)
+    application.job_queue = job_queue
 
     # Register handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
-    # Run the bot until interrupted
+    # Start the bot
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
